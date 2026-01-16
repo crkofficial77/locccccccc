@@ -34,11 +34,19 @@
       border-bottom: 1px solid rgba(255,255,255,0.08);
     }
 
-    header h1 { font-weight: 600; }
+    header h1 {
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+
+    header p {
+      font-size: 14px;
+      opacity: 0.85;
+    }
 
     .container {
       padding: 20px;
-      max-width: 1200px;
+      max-width: 1100px;
       margin: auto;
     }
 
@@ -66,25 +74,20 @@
       color: #fff;
       font-size: 14px;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: all 0.25s ease;
       box-shadow: 0 0 18px rgba(143, 91, 255, 0.45);
-      animation: glow 2.5s infinite alternate;
-    }
-
-    @keyframes glow {
-      from { box-shadow: 0 0 12px rgba(143,91,255,0.4); }
-      to { box-shadow: 0 0 28px rgba(143,91,255,0.85); }
     }
 
     button:hover {
-      transform: translateY(-3px) scale(1.05);
+      transform: translateY(-3px) scale(1.03);
+      box-shadow: 0 0 30px rgba(143, 91, 255, 0.75);
     }
 
     #status {
       text-align: center;
-      margin-top: 12px;
+      margin-top: 10px;
       font-size: 13px;
-      color: #d7b8ff;
+      opacity: 0.9;
     }
 
     #map {
@@ -94,13 +97,6 @@
       overflow: hidden;
       box-shadow: 0 0 45px rgba(120, 60, 200, 0.35);
       border: 1px solid rgba(200,160,255,0.18);
-    }
-
-    .role-select {
-      display: flex;
-      justify-content: center;
-      gap: 15px;
-      margin-bottom: 15px;
     }
 
     footer {
@@ -122,12 +118,8 @@
 
   <div class="container">
     <div class="card">
-      <div class="role-select">
-        <button onclick="setRole('driver')">🚖 Driver Mode</button>
-        <button onclick="setRole('passenger')">👤 Passenger Mode</button>
-      </div>
       <div class="controls">
-        <button onclick="startSharing()">Share My Location</button>
+        <button onclick="getLocation()">Share My Location</button>
         <button onclick="stopSharing()">Stop Sharing</button>
       </div>
       <div id="status">Location sharing is currently off</div>
@@ -142,46 +134,45 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <script>
-    let role = null;
-    let watchId = null;
-    let map = L.map('map').setView([14.5995, 120.9842], 13);
+    let map = L.map('map').setView([14.5995, 120.9842], 13); // Manila default
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '© OpenStreetMap'
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
-    const tricycles = {};
+    let marker = null;
+    let watchId = null;
 
-    function setRole(selectedRole) {
-      role = selectedRole;
-      document.getElementById('status').innerText = `Mode selected: ${role}`;
-    }
-
-    function startSharing() {
-      if (role !== 'driver') {
-        document.getElementById('status').innerText = 'Only drivers can share location';
+    function getLocation() {
+      if (!navigator.geolocation) {
+        document.getElementById('status').innerText = 'Geolocation not supported by your browser';
         return;
       }
 
-      watchId = navigator.geolocation.watchPosition(pos => {
-        const id = 'TRI-' + Math.floor(Math.random() * 999);
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
+      document.getElementById('status').innerText = 'Sharing live location...';
 
-        if (!tricycles[id]) {
-          tricycles[id] = L.marker([lat, lng]).addTo(map)
-            .bindPopup(`🚖 Tricycle ${id}`);
+      watchId = navigator.geolocation.watchPosition(position => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+
+        if (marker) {
+          marker.setLatLng([lat, lng]);
         } else {
-          tricycles[id].setLatLng([lat, lng]);
+          marker = L.marker([lat, lng]).addTo(map)
+            .bindPopup('🚖 Tricycle Location')
+            .openPopup();
         }
+
         map.setView([lat, lng], 16);
-      }, () => {
-        document.getElementById('status').innerText = 'GPS error';
-      }, { enableHighAccuracy: true });
+      }, error => {
+        document.getElementById('status').innerText = 'Error getting location';
+      }, {
+        enableHighAccuracy: true
+      });
     }
 
     function stopSharing() {
-      if (watchId) {
+      if (watchId !== null) {
         navigator.geolocation.clearWatch(watchId);
         watchId = null;
         document.getElementById('status').innerText = 'Location sharing stopped';
@@ -191,3 +182,4 @@
 
 </body>
 </html>
+
