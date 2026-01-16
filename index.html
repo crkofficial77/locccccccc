@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tricycle Location Sharing</title>
+
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    body {
+      background: radial-gradient(circle at top, #3b1d5a, #0b0612 70%);
+      min-height: 100vh;
+      color: #f5e9ff;
+    }
+
+    header {
+      padding: 24px;
+      text-align: center;
+      background: rgba(90, 40, 130, 0.25);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.45);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    header h1 { font-weight: 600; }
+
+    .container {
+      padding: 20px;
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    .card {
+      background: linear-gradient(160deg, rgba(120, 60, 180, 0.22), rgba(0, 0, 0, 0.35));
+      border-radius: 22px;
+      padding: 22px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.55);
+      margin-bottom: 24px;
+      border: 1px solid rgba(200, 160, 255, 0.15);
+    }
+
+    .controls {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    button {
+      padding: 14px 26px;
+      border: none;
+      border-radius: 40px;
+      background: linear-gradient(135deg, #8f5bff, #4a1fb8);
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 18px rgba(143, 91, 255, 0.45);
+      animation: glow 2.5s infinite alternate;
+    }
+
+    @keyframes glow {
+      from { box-shadow: 0 0 12px rgba(143,91,255,0.4); }
+      to { box-shadow: 0 0 28px rgba(143,91,255,0.85); }
+    }
+
+    button:hover {
+      transform: translateY(-3px) scale(1.05);
+    }
+
+    #status {
+      text-align: center;
+      margin-top: 12px;
+      font-size: 13px;
+      color: #d7b8ff;
+    }
+
+    #map {
+      width: 100%;
+      height: 420px;
+      border-radius: 22px;
+      overflow: hidden;
+      box-shadow: 0 0 45px rgba(120, 60, 200, 0.35);
+      border: 1px solid rgba(200,160,255,0.18);
+    }
+
+    .role-select {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 18px;
+      font-size: 12px;
+      opacity: 0.65;
+      color: #c9a9ff;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🚖 Tricycle Location Sharing</h1>
+    <p style="color:#d7b8ff; margin-top:6px;">Live GPS</p>
+    <p>Real-time location tracking</p>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <div class="role-select">
+        <button onclick="setRole('driver')">🚖 Driver Mode</button>
+        <button onclick="setRole('passenger')">👤 Passenger Mode</button>
+      </div>
+      <div class="controls">
+        <button onclick="startSharing()">Share My Location</button>
+        <button onclick="stopSharing()">Stop Sharing</button>
+      </div>
+      <div id="status">Location sharing is currently off</div>
+    </div>
+
+    <div class="card">
+      <div id="map"></div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    let role = null;
+    let watchId = null;
+    let map = L.map('map').setView([14.5995, 120.9842], 13);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    const tricycles = {};
+
+    function setRole(selectedRole) {
+      role = selectedRole;
+      document.getElementById('status').innerText = `Mode selected: ${role}`;
+    }
+
+    function startSharing() {
+      if (role !== 'driver') {
+        document.getElementById('status').innerText = 'Only drivers can share location';
+        return;
+      }
+
+      watchId = navigator.geolocation.watchPosition(pos => {
+        const id = 'TRI-' + Math.floor(Math.random() * 999);
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+
+        if (!tricycles[id]) {
+          tricycles[id] = L.marker([lat, lng]).addTo(map)
+            .bindPopup(`🚖 Tricycle ${id}`);
+        } else {
+          tricycles[id].setLatLng([lat, lng]);
+        }
+        map.setView([lat, lng], 16);
+      }, () => {
+        document.getElementById('status').innerText = 'GPS error';
+      }, { enableHighAccuracy: true });
+    }
+
+    function stopSharing() {
+      if (watchId) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+        document.getElementById('status').innerText = 'Location sharing stopped';
+      }
+    }
+  </script>
+
+</body>
+</html>
